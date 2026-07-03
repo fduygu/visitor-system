@@ -14,6 +14,19 @@ export const createVisitor = async (
       });
     }
 
+    const activeVisitor = await Visitor.findOne({
+      tcNo: req.body.tcNo,
+      campus: user.role,
+      status: "İÇERİDE",
+    });
+
+    if (activeVisitor) {
+      return res.status(400).json({
+        message:
+          "Bu ziyaretçi hâlen içeride görünüyor. Yeni giriş kaydı oluşturulamaz.",
+      });
+    }
+
     const visitor = await Visitor.create({
       firstName: req.body.firstName,
       lastName: req.body.lastName,
@@ -64,9 +77,7 @@ export const getVisitorByTc = async (
     const { tcNo } = req.params;
 
     const filter =
-      user.role === "admin"
-        ? { tcNo }
-        : { tcNo, campus: user.role };
+      user.role === "admin" ? { tcNo } : { tcNo, campus: user.role };
 
     const visitor = await Visitor.findOne(filter).sort({ createdAt: -1 });
 
@@ -76,7 +87,15 @@ export const getVisitorByTc = async (
       });
     }
 
-    return res.json(visitor);
+    const activeVisitor = await Visitor.findOne({
+      ...filter,
+      status: "İÇERİDE",
+    });
+
+    return res.json({
+      ...visitor.toObject(),
+      isInside: !!activeVisitor,
+    });
   } catch (error) {
     return res.status(500).json({
       message: "TC ile ziyaretçi aranırken hata oluştu",
@@ -107,6 +126,12 @@ export const exitVisitor = async (
     if (!visitor) {
       return res.status(404).json({
         message: "Ziyaretçi kaydı bulunamadı",
+      });
+    }
+
+    if (visitor.status === "ÇIKIŞ YAPTI") {
+      return res.status(400).json({
+        message: "Bu ziyaretçinin çıkışı zaten yapılmış",
       });
     }
 
