@@ -2,6 +2,25 @@
   <q-page class="q-pa-lg">
     <div class="text-h4 q-mb-lg">Dashboard</div>
 
+<q-banner
+  v-if="longStayVisitors.length > 0"
+  class="bg-red-1 text-red-10 q-mb-lg"
+  rounded
+>
+  <template #avatar>
+    <q-icon name="warning" color="red" />
+  </template>
+
+  <div class="text-weight-bold">
+    24 saatten uzun süredir içeride görünen ziyaretçi var.
+  </div>
+
+  <div class="q-mt-xs">
+    {{ longStayVisitors.length }} ziyaretçi için çıkış kontrolü yapılması önerilir.
+    Çıkış işlemi ilgili kampüs kullanıcısı tarafından yapılmalıdır.
+  </div>
+</q-banner>
+
     <div class="row q-col-gutter-lg">
       <div class="col-12 col-md-3">
         <q-card class="bg-blue-1">
@@ -40,7 +59,26 @@
       </div>
     </div>
 
-    <q-card class="q-mt-xl">
+    <q-card v-if="longStayVisitors.length > 0" class="q-mt-xl">
+      <q-card-section>
+        <div class="text-h6">Uzun Süredir İçeride Görünenler</div>
+        <div class="text-grey-7 q-mt-xs">
+          24 saatten uzun süredir çıkış yapılmamış ziyaretçiler.
+        </div>
+      </q-card-section>
+
+      <q-table
+        :rows="longStayVisitors"
+        :columns="longStayColumns"
+        row-key="_id"
+        flat
+        bordered
+        hide-pagination
+        :pagination="{ rowsPerPage: 5 }"
+      />
+    </q-card>
+
+    <q-card v-if="isAdmin" class="q-mt-xl">
       <q-card-section>
         <div class="text-h6">Bugünkü Kampüs Dağılımı</div>
       </q-card-section>
@@ -115,11 +153,22 @@ interface CampusStat {
   count: number
 }
 
+interface User {
+  id: string
+  username: string
+  role: string
+}
+
+const savedUser = localStorage.getItem('user')
+const user: User | null = savedUser ? JSON.parse(savedUser) : null
+const isAdmin = user?.role === 'admin'
+
 const todayEntries = ref(0)
 const insideVisitors = ref(0)
 const todayExits = ref(0)
 const todayInsideRemaining = ref(0)
 const lastVisitors = ref<Visitor[]>([])
+const longStayVisitors = ref<Visitor[]>([])
 
 const campusStats = ref<CampusStat[]>([
   { key: 'kutlubey', label: 'Kutlubey', count: 0 },
@@ -158,11 +207,36 @@ const isToday = (dateValue: string | null) => {
   return new Date(dateValue).toDateString() === new Date().toDateString()
 }
 
+const isLongStay = (visitor: Visitor) => {
+  if (normalizeStatus(visitor.status) !== 'İÇERİDE') return false
+
+  const entryTime = new Date(visitor.entryTime).getTime()
+  const now = new Date().getTime()
+
+  const diffHours = (now - entryTime) / 1000 / 60 / 60
+
+  return diffHours >= 24
+}
+
 const formatDateTime = (dateValue: string) => {
   return new Date(dateValue).toLocaleString('tr-TR', {
     dateStyle: 'short',
     timeStyle: 'short',
   })
+}
+
+const calculateStayDuration = (entryTime: string) => {
+  const entry = new Date(entryTime).getTime()
+  const now = new Date().getTime()
+
+  const diffMs = now - entry
+  const totalHours = Math.floor(diffMs / 1000 / 60 / 60)
+  const days = Math.floor(totalHours / 24)
+  const hours = totalHours % 24
+
+  if (days === 0) return `${hours} saat`
+
+  return `${days} gün ${hours} saat`
 }
 
 const columns: QTableColumn<Visitor>[] = [
@@ -198,6 +272,39 @@ const columns: QTableColumn<Visitor>[] = [
   },
 ]
 
+const longStayColumns: QTableColumn<Visitor>[] = [
+  {
+    name: 'fullName',
+    label: 'Ad Soyad',
+    field: (row) => `${row.firstName} ${row.lastName}`,
+    align: 'left',
+  },
+  {
+    name: 'visitTo',
+    label: 'Kime Geldi',
+    field: 'visitTo',
+    align: 'left',
+  },
+  {
+    name: 'campus',
+    label: 'Kampüs',
+    field: (row) => formatCampus(row.campus),
+    align: 'left',
+  },
+  {
+    name: 'entryTime',
+    label: 'Geliş Saati',
+    field: (row) => formatDateTime(row.entryTime),
+    align: 'left',
+  },
+  {
+    name: 'duration',
+    label: 'İçeride Kalma Süresi',
+    field: (row) => calculateStayDuration(row.entryTime),
+    align: 'left',
+  },
+]
+
 const calculateCampusStats = (todayVisitors: Visitor[]) => {
   campusStats.value = campusStats.value.map((campus) => ({
     ...campus,
@@ -226,15 +333,17 @@ const getDashboardData = async () => {
     (v) => normalizeStatus(v.status) === 'İÇERİDE',
   ).length
 
-todayExits.value = todayVisitors.filter(
-  (visitor) =>
-    visitor.exitTime &&
-    normalizeStatus(visitor.status) === 'ÇIKIŞ YAPTI',
-).length
+  todayExits.value = visitors.filter((visitor) =>
+    isToday(visitor.exitTime),
+  ).length
 
   todayInsideRemaining.value = todayVisitors.filter(
     (visitor) => normalizeStatus(visitor.status) === 'İÇERİDE',
   ).length
+
+  longStayVisitors.value = visitors.filter((visitor) =>
+    isLongStay(visitor),
+  )
 
   calculateCampusStats(todayVisitors)
 

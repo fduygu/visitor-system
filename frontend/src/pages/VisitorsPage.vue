@@ -1,7 +1,9 @@
 <template>
   <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4">Ziyaretçiler</div>
+    <div class="row items-center justify-between q-mb-sm">
+      <div>
+        <div class="text-h4">Giriş - Çıkış Hareketleri </div>
+      </div>
 
       <div class="row q-gutter-sm">
         <q-btn
@@ -14,11 +16,30 @@
         <q-btn
           v-if="!isAdmin"
           color="primary"
+          icon="person_add"
           label="Yeni Ziyaretçi"
           @click="dialogOpen = true"
         />
       </div>
     </div>
+
+    <q-banner
+      rounded
+      class="bg-blue-1 text-primary q-mb-lg"
+    >
+      <template #avatar>
+        <q-icon name="info" color="primary" />
+      </template>
+
+      <div class="text-weight-medium">
+        Bu ekranda <b>bugün giriş yapan</b>, <b>bugün çıkış yapan</b> ve
+        <b>halen içeride bulunan</b> ziyaretçiler görüntülenir.
+      </div>
+
+      <div class="text-grey-8 q-mt-xs">
+        Ziyaretçi çıkış işlemleri yalnızca bu sayfadan yapılabilir.
+      </div>
+    </q-banner>
 
     <div class="row q-col-gutter-md q-mb-md">
       <div class="col-12 col-md-4">
@@ -60,7 +81,7 @@
             v-if="!isAdmin && normalizeStatus(props.row.status) === 'İÇERİDE'"
             color="negative"
             size="sm"
-            label="Çıkış Yaptı"
+            label="Çıkış Yap"
             @click="confirmExitVisitor(props.row._id)"
           />
           <span v-else>-</span>
@@ -87,19 +108,39 @@
             counter
           />
 
-          <div v-if="visitorFoundMessage" class="text-positive text-caption q-mt-xs">
-            {{ visitorFoundMessage }}
-          </div>
+<div v-if="visitorInsideWarning" class="text-negative text-caption q-mt-xs">
+  {{ visitorInsideWarning }}
+</div>
 
-          <q-input v-model="form.phone" label="Telefon" outlined class="q-mt-md" />
-          <q-input v-model="form.plateNumber" label="Araç Plakası (Varsa)" outlined class="q-mt-md" />
-          <q-input v-model="form.visitTo" label="Kime Ziyarete Geldi" outlined class="q-mt-md" />
+<div v-else-if="visitorFoundMessage" class="text-positive text-caption q-mt-xs">
+  {{ visitorFoundMessage }}
+</div>
+
+<q-input
+  v-model="form.phone"
+  label="Telefon"
+  outlined
+  class="q-mt-md"
+  maxlength="14"
+  placeholder="0555 123 45 67"
+  @update:model-value="formatPhoneInput"
+/>          
+<q-input
+  v-model="form.plateNumber"
+  label="Araç Plakası (Varsa)"
+  outlined
+  @blur="formatPlate"
+/>          <q-input v-model="form.visitTo" label="Kime Ziyarete Geldi" outlined class="q-mt-md" />
         </q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="İptal" @click="closeDialog" />
-          <q-btn color="primary" label="Kaydet" @click="createVisitor" />
-        </q-card-actions>
+<q-btn
+  color="primary"
+  label="Kaydet"
+  :disable="!!visitorInsideWarning"
+  @click="createVisitor"
+/>        </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
@@ -143,6 +184,7 @@ const searchText = ref('')
 const onlyInside = ref(false)
 const lastSearchedTc = ref('')
 const visitorFoundMessage = ref('')
+const visitorInsideWarning = ref('')
 
 const form = ref({
   firstName: '',
@@ -189,8 +231,23 @@ const formatCampus = (campus: string) => {
 
 const isToday = (dateValue: string | null) => {
   if (!dateValue) return false
-
   return new Date(dateValue).toDateString() === new Date().toDateString()
+}
+const formatPhoneInput = (value: string | number | null) => {
+  const digits = String(value ?? '').replace(/\D/g, '').slice(0, 11)
+
+  if (digits.length <= 4) {
+    form.value.phone = digits
+  } else if (digits.length <= 7) {
+    form.value.phone = `${digits.slice(0, 4)} ${digits.slice(4)}`
+  } else if (digits.length <= 9) {
+    form.value.phone = `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`
+  } else {
+    form.value.phone = `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9, 11)}`
+  }
+}
+const formatPlate = () => {
+  form.value.plateNumber = form.value.plateNumber.toUpperCase()
 }
 
 const formatDateTime = (dateValue: string | null) => {
@@ -223,10 +280,12 @@ const filteredVisitors = computed(() => {
   return visitors.value.filter((visitor) => {
     const status = normalizeStatus(visitor.status)
 
-    const isDailyRecord =
-      isToday(visitor.entryTime) || isToday(visitor.exitTime)
+    const isEntryExitRecord =
+      isToday(visitor.entryTime) ||
+      isToday(visitor.exitTime) ||
+      status === 'İÇERİDE'
 
-    if (!isDailyRecord) return false
+    if (!isEntryExitRecord) return false
     if (onlyInside.value && status !== 'İÇERİDE') return false
     if (!search) return true
 
@@ -264,11 +323,11 @@ const exportExcel = () => {
   const worksheet = XLSX.utils.json_to_sheet(data)
   const workbook = XLSX.utils.book_new()
 
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Ziyaretçiler')
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Giriş Çıkış')
 
   XLSX.writeFile(
     workbook,
-    `gunluk_giris_cikis_${new Date().toISOString().split('T')[0]}.xlsx`,
+    `giris_cikis_${new Date().toISOString().split('T')[0]}.xlsx`,
   )
 
   $q.notify({
@@ -371,6 +430,7 @@ const resetForm = () => {
 
   lastSearchedTc.value = ''
   visitorFoundMessage.value = ''
+  visitorInsideWarning.value = ''
 }
 
 const closeDialog = () => {
@@ -388,7 +448,7 @@ const getVisitors = async () => {
 
 const fillVisitorByTc = async (tcNo: string) => {
   try {
-    const response = await axiosInstance.get<Visitor>(
+    const response = await axiosInstance.get<Visitor & { isInside?: boolean }>(
       `/visitors/by-tc/${tcNo}`,
       {
         headers: getAuthHeader(),
@@ -400,9 +460,18 @@ const fillVisitorByTc = async (tcNo: string) => {
     form.value.phone = response.data.phone
     form.value.plateNumber = response.data.plateNumber || ''
 
+    if (response.data.isInside) {
+      visitorInsideWarning.value =
+        'Bu ziyaretçi hâlen içeride görünüyor. Önce çıkış işlemi yapılmalıdır.'
+      visitorFoundMessage.value = ''
+      return
+    }
+
+    visitorInsideWarning.value = ''
     visitorFoundMessage.value = 'Bu ziyaretçi daha önce kayıtlı. Bilgiler otomatik dolduruldu.'
   } catch {
     visitorFoundMessage.value = ''
+    visitorInsideWarning.value = ''
   }
 }
 
@@ -410,11 +479,11 @@ watch(
   () => form.value.tcNo,
   async (newTc) => {
     const cleanTc = newTc.trim()
-
-    if (cleanTc.length !== 11) {
-      visitorFoundMessage.value = ''
-      return
-    }
+if (cleanTc.length !== 11) {
+  visitorFoundMessage.value = ''
+  visitorInsideWarning.value = ''
+  return
+}
 
     if (cleanTc === lastSearchedTc.value) return
 

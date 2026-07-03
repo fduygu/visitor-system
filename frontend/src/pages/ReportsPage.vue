@@ -1,7 +1,5 @@
 <template>
   <q-page class="q-pa-lg">
-    <div class="text-h4 q-mb-lg">Raporlar</div>
-
     <q-card>
       <q-card-section>
         <div class="text-h6">Ziyaretçi Raporları</div>
@@ -13,23 +11,11 @@
       <q-card-section>
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-3">
-            <q-input
-              v-model="startDate"
-              outlined
-              dense
-              type="date"
-              label="Başlangıç Tarihi"
-            />
+            <q-input v-model="startDate" outlined dense type="date" label="Başlangıç Tarihi" />
           </div>
 
           <div class="col-12 col-md-3">
-            <q-input
-              v-model="endDate"
-              outlined
-              dense
-              type="date"
-              label="Bitiş Tarihi"
-            />
+            <q-input v-model="endDate" outlined dense type="date" label="Bitiş Tarihi" />
           </div>
 
           <div class="col-12 col-md-3">
@@ -56,6 +42,13 @@
         <div class="row q-gutter-sm q-mt-md">
           <q-btn color="primary" label="Filtrele" @click="getVisitors" />
           <q-btn flat color="primary" label="Temizle" @click="clearFilters" />
+
+          <q-btn
+            color="positive"
+            icon="download"
+            label="Excel'e Aktar"
+            @click="exportExcel"
+          />
         </div>
       </q-card-section>
     </q-card>
@@ -64,7 +57,7 @@
       <div class="col-12 col-md-4">
         <q-card class="bg-blue-1">
           <q-card-section>
-            <div class="text-subtitle1">Toplam Kayıt</div>
+            <div class="text-subtitle1">{{ getCampusTitle() }}</div>
             <div class="text-h4 text-weight-bold">{{ filteredVisitors.length }}</div>
           </q-card-section>
         </q-card>
@@ -94,13 +87,7 @@
         <div class="text-h6">Rapor Sonuçları</div>
       </q-card-section>
 
-      <q-table
-        :rows="filteredVisitors"
-        :columns="columns"
-        row-key="_id"
-        flat
-        bordered
-      >
+      <q-table :rows="filteredVisitors" :columns="columns" row-key="_id" flat bordered>
         <template #body-cell-status="props">
           <q-td :props="props">
             <q-badge
@@ -116,8 +103,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import type { QTableColumn } from 'quasar'
+import { useQuasar, type QTableColumn } from 'quasar'
 import axiosInstance from 'src/boot/axios'
+import * as XLSX from 'xlsx'
 
 interface Visitor {
   _id: string
@@ -133,6 +121,8 @@ interface Visitor {
   status: string
 }
 
+const $q = useQuasar()
+
 const visitors = ref<Visitor[]>([])
 
 const startDate = ref('')
@@ -140,20 +130,11 @@ const endDate = ref('')
 const selectedCampus = ref('Tümü')
 const selectedStatus = ref('Tümü')
 
-const campusOptions = [
-  'Tümü',
-  'Kutlubey',
-  'Ağdacı',
-  'Ulus',
-  'Kurucaşile',
-  'OSB',
-]
+const user = JSON.parse(localStorage.getItem('user') || '{}')
+const isAdmin = user.role === 'admin'
 
-const statusOptions = [
-  'Tümü',
-  'İÇERİDE',
-  'ÇIKIŞ YAPTI',
-]
+const campusOptions = ['Tümü', 'Kutlubey', 'Ağdacı', 'Ulus', 'Kurucaşile', 'OSB']
+const statusOptions = ['Tümü', 'İÇERİDE', 'ÇIKIŞ YAPTI']
 
 const normalizeStatus = (status: string) => {
   if (status === 'ACTIVE') return 'İÇERİDE'
@@ -178,20 +159,37 @@ const formatCampus = (campus: string) => {
   }
 }
 
+const getCampusTitle = () => {
+  if (isAdmin) return 'Toplam Kayıt'
+
+  switch (user.role) {
+    case 'kutlubey':
+      return 'Kutlubey Kayıtları'
+    case 'agdaci':
+      return 'Ağdacı Kayıtları'
+    case 'ulus':
+      return 'Ulus Kayıtları'
+    case 'kurucasile':
+      return 'Kurucaşile Kayıtları'
+    case 'osb':
+      return 'OSB Kayıtları'
+    default:
+      return 'Toplam Kayıt'
+  }
+}
+
 const isDateInRange = (entryTime: string) => {
   const entryDate = new Date(entryTime)
 
   if (startDate.value) {
     const start = new Date(startDate.value)
     start.setHours(0, 0, 0, 0)
-
     if (entryDate < start) return false
   }
 
   if (endDate.value) {
     const end = new Date(endDate.value)
     end.setHours(23, 59, 59, 999)
-
     if (entryDate > end) return false
   }
 
@@ -251,6 +249,36 @@ const calculateDuration = (entryTime: string, exitTime: string | null) => {
   if (hours === 0) return `${minutes} dk`
 
   return `${hours} saat ${minutes} dk`
+}
+
+const exportExcel = () => {
+  const data = filteredVisitors.value.map((visitor) => ({
+    'Ad Soyad': `${visitor.firstName} ${visitor.lastName}`,
+    'TC Kimlik No': visitor.tcNo,
+    Telefon: visitor.phone,
+    Plaka: visitor.plateNumber || '-',
+    'Kime Geldi': visitor.visitTo,
+    Kampüs: formatCampus(visitor.campus),
+    'Geliş Saati': formatDateTime(visitor.entryTime),
+    'Çıkış Saati': formatDateTime(visitor.exitTime),
+    'Kaldığı Süre': calculateDuration(visitor.entryTime, visitor.exitTime),
+    Durum: normalizeStatus(visitor.status),
+  }))
+
+  const worksheet = XLSX.utils.json_to_sheet(data)
+  const workbook = XLSX.utils.book_new()
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Raporlar')
+
+  XLSX.writeFile(
+    workbook,
+    `ziyaretci_raporu_${new Date().toISOString().split('T')[0]}.xlsx`,
+  )
+
+  $q.notify({
+    type: 'positive',
+    message: 'Excel raporu oluşturuldu.',
+  })
 }
 
 const columns: QTableColumn<Visitor>[] = [
