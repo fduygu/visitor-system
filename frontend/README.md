@@ -1,4 +1,4 @@
-# Ziyaretci Sistemi (visitor-system)
+# Ziyaretci  Takip Sistemi (visitor-system)
 
 A Quasar Project
 

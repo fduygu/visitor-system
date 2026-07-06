@@ -2,7 +2,7 @@
   "name": "visitor-system",
   "version": "0.0.1",
   "description": "A Quasar Project",
-  "productName": "Ziyaretci Sistemi",
+  "productName": "Ziyaretci Takip Sistemi",
   "author": "Duygu Filiz",
   "type": "module",
   "private": true,

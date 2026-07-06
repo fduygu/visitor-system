@@ -10,25 +10,28 @@
 
       <q-card-section>
         <div class="row q-col-gutter-md">
-          <div class="col-12 col-md-3">
+          <div :class="isAdmin ? 'col-12 col-md-3' : 'col-12 col-md-4'">
             <q-input v-model="startDate" outlined dense type="date" label="Başlangıç Tarihi" />
           </div>
 
-          <div class="col-12 col-md-3">
+         <div :class="isAdmin ? 'col-12 col-md-3' : 'col-12 col-md-4'">
             <q-input v-model="endDate" outlined dense type="date" label="Bitiş Tarihi" />
           </div>
 
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="selectedCampus"
-              outlined
-              dense
-              label="Kampüs"
-              :options="campusOptions"
-            />
-          </div>
+<div
+  v-if="isAdmin"
+  class="col-12 col-md-3"
+>
+  <q-select
+    v-model="selectedCampus"
+    outlined
+    dense
+    label="Kampüs"
+    :options="campusOptions"
+  />
+</div>
 
-          <div class="col-12 col-md-3">
+         <div :class="isAdmin ? 'col-12 col-md-3' : 'col-12 col-md-4'">
             <q-select
               v-model="selectedStatus"
               outlined
