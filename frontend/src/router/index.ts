@@ -22,16 +22,28 @@ export default defineRouter((/* { store, ssrContext } */) => {
     : process.env.VUE_ROUTER_MODE === 'history'
       ? createWebHistory
       : createWebHashHistory;
+const Router = createRouter({
+  scrollBehavior: () => ({ left: 0, top: 0 }),
+  routes,
 
-  const Router = createRouter({
-    scrollBehavior: () => ({ left: 0, top: 0 }),
-    routes,
+  history: createHistory(process.env.VUE_ROUTER_BASE),
+});
 
-    // Leave this as is and make changes in quasar.conf.js instead!
-    // quasar.conf.js -> build -> vueRouterMode
-    // quasar.conf.js -> build -> publicPath
-    history: createHistory(process.env.VUE_ROUTER_BASE),
-  });
+Router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
 
-  return Router;
+  if (!token && to.path !== '/login') {
+    next('/login')
+    return
+  }
+
+  if (token && to.path === '/login') {
+    next('/dashboard')
+    return
+  }
+
+  next()
+})
+
+return Router;
 });
