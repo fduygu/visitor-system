@@ -99,15 +99,15 @@
           <q-input v-model="form.firstName" label="Ad" outlined />
           <q-input v-model="form.lastName" label="Soyad" outlined class="q-mt-md" />
 
-          <q-input
-            v-model="form.tcNo"
-            label="TC Kimlik No"
-            outlined
-            class="q-mt-md"
-            maxlength="11"
-            counter
-          />
-
+<q-input
+  v-model="form.tcNo"
+  label="TC Kimlik No"
+  outlined
+  class="q-mt-md"
+  maxlength="11"
+  counter
+  mask="###########"
+/>
 <div v-if="visitorInsideWarning" class="text-negative text-caption q-mt-xs">
   {{ visitorInsideWarning }}
 </div>
@@ -272,6 +272,34 @@ const calculateDuration = (entryTime: string, exitTime: string | null) => {
   if (hours === 0) return `${minutes} dk`
 
   return `${hours} saat ${minutes} dk`
+}
+
+const isValidTcNo = (tcNo: string) => {
+  if (!/^[1-9][0-9]{10}$/.test(tcNo)) {
+    return false
+  }
+
+  const digits = tcNo.split('').map(Number)
+
+  const d1 = digits[0]!
+  const d2 = digits[1]!
+  const d3 = digits[2]!
+  const d4 = digits[3]!
+  const d5 = digits[4]!
+  const d6 = digits[5]!
+  const d7 = digits[6]!
+  const d8 = digits[7]!
+  const d9 = digits[8]!
+  const d10 = digits[9]!
+  const d11 = digits[10]!
+
+  const oddSum = d1 + d3 + d5 + d7 + d9
+  const evenSum = d2 + d4 + d6 + d8
+
+  const check10 = ((oddSum * 7) - evenSum) % 10
+  const check11 = (d1 + d2 + d3 + d4 + d5 + d6 + d7 + d8 + d9 + d10) % 10
+
+  return d10 === check10 && d11 === check11
 }
 
 const filteredVisitors = computed(() => {
@@ -499,15 +527,48 @@ const createVisitor = async () => {
     return
   }
 
-  await axiosInstance.post('/visitors', form.value, {
-    headers: getAuthHeader(),
-  })
+  const cleanTc = form.value.tcNo.trim()
 
-  dialogOpen.value = false
-  resetForm()
-  await getVisitors()
+  if (!isValidTcNo(cleanTc)) {
+    $q.notify({
+      type: 'negative',
+      message: 'Geçerli bir TC Kimlik No giriniz.',
+    })
+    return
+  }
+
+  try {
+    const response = await axiosInstance.post(
+      '/visitors',
+      {
+        ...form.value,
+        tcNo: cleanTc,
+      },
+      {
+        headers: getAuthHeader(),
+      },
+    )
+
+    visitors.value.unshift(response.data)
+
+    dialogOpen.value = false
+    resetForm()
+
+    await getVisitors()
+
+    $q.notify({
+      type: 'positive',
+      message: 'Ziyaretçi başarıyla kaydedildi.',
+    })
+  } catch (error) {
+    console.error(error)
+
+    $q.notify({
+      type: 'negative',
+      message: 'Ziyaretçi kaydedilirken hata oluştu.',
+    })
+  }
 }
-
 const doExitVisitor = async (id: string) => {
   await axiosInstance.put(
     `/visitors/exit/${id}`,

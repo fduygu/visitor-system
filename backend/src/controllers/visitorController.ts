@@ -1,6 +1,35 @@
 import { Request, Response } from "express";
 import Visitor from "../models/Visitor";
 
+const isValidTcNo = (tcNo: string) => {
+  if (!/^[1-9][0-9]{10}$/.test(tcNo)) {
+    return false;
+  }
+
+  const digits = tcNo.split("").map(Number);
+
+  const d1 = digits[0]!;
+  const d2 = digits[1]!;
+  const d3 = digits[2]!;
+  const d4 = digits[3]!;
+  const d5 = digits[4]!;
+  const d6 = digits[5]!;
+  const d7 = digits[6]!;
+  const d8 = digits[7]!;
+  const d9 = digits[8]!;
+  const d10 = digits[9]!;
+  const d11 = digits[10]!;
+
+  const oddSum = d1 + d3 + d5 + d7 + d9;
+  const evenSum = d2 + d4 + d6 + d8;
+
+  const check10 = ((oddSum * 7) - evenSum) % 10;
+  const check11 =
+    (d1 + d2 + d3 + d4 + d5 + d6 + d7 + d8 + d9 + d10) % 10;
+
+  return d10 === check10 && d11 === check11;
+};
+
 export const createVisitor = async (
   req: Request,
   res: Response
@@ -14,8 +43,16 @@ export const createVisitor = async (
       });
     }
 
+    const cleanTc = String(req.body.tcNo || "").trim();
+
+    if (!isValidTcNo(cleanTc)) {
+      return res.status(400).json({
+        message: "Geçerli bir TC Kimlik No giriniz",
+      });
+    }
+
     const activeVisitor = await Visitor.findOne({
-      tcNo: req.body.tcNo,
+      tcNo: cleanTc,
       campus: user.role,
       status: "İÇERİDE",
     });
@@ -30,7 +67,7 @@ export const createVisitor = async (
     const visitor = await Visitor.create({
       firstName: req.body.firstName,
       lastName: req.body.lastName,
-      tcNo: req.body.tcNo,
+      tcNo: cleanTc,
       phone: req.body.phone,
       plateNumber: req.body.plateNumber || "",
       visitTo: req.body.visitTo,
@@ -76,8 +113,10 @@ export const getVisitorByTc = async (
     const user = (req as any).user;
     const { tcNo } = req.params;
 
+    const cleanTc = String(tcNo || "").trim();
+
     const filter =
-      user.role === "admin" ? { tcNo } : { tcNo, campus: user.role };
+      user.role === "admin" ? { tcNo: cleanTc } : { tcNo: cleanTc, campus: user.role };
 
     const visitor = await Visitor.findOne(filter).sort({ createdAt: -1 });
 
