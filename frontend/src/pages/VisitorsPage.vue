@@ -2,16 +2,11 @@
   <q-page class="q-pa-lg">
     <div class="row items-center justify-between q-mb-sm">
       <div>
-        <div class="text-h4">Giriş - Çıkış Hareketleri </div>
+        <div class="text-h4">Giriş - Çıkış Hareketleri</div>
       </div>
 
       <div class="row q-gutter-sm">
-        <q-btn
-          color="positive"
-          icon="download"
-          label="Excel'e Aktar"
-          @click="exportExcel"
-        />
+        <q-btn color="positive" icon="download" label="Excel'e Aktar" @click="exportExcel" />
 
         <q-btn
           v-if="!isAdmin"
@@ -23,10 +18,7 @@
       </div>
     </div>
 
-    <q-banner
-      rounded
-      class="bg-blue-1 text-primary q-mb-lg"
-    >
+    <q-banner rounded class="bg-blue-1 text-primary q-mb-lg">
       <template #avatar>
         <q-icon name="info" color="primary" />
       </template>
@@ -48,7 +40,7 @@
           outlined
           dense
           clearable
-          label="Ad, soyad, TC, telefon veya plaka ara"
+          label="Ad, soyad, TC, telefon, plaka, kart veya açıklama ara"
         >
           <template #prepend>
             <q-icon name="search" />
@@ -82,7 +74,7 @@
             color="negative"
             size="sm"
             label="Çıkış Yap"
-            @click="confirmExitVisitor(props.row._id)"
+            @click="confirmExitVisitor(props.row)"
           />
           <span v-else>-</span>
         </q-td>
@@ -99,48 +91,82 @@
           <q-input v-model="form.firstName" label="Ad" outlined />
           <q-input v-model="form.lastName" label="Soyad" outlined class="q-mt-md" />
 
-<q-input
-  v-model="form.tcNo"
-  label="TC Kimlik No"
-  outlined
-  class="q-mt-md"
-  maxlength="11"
-  counter
-  mask="###########"
-/>
-<div v-if="visitorInsideWarning" class="text-negative text-caption q-mt-xs">
-  {{ visitorInsideWarning }}
-</div>
+          <q-input
+            v-model="form.tcNo"
+            label="TC Kimlik No"
+            outlined
+            class="q-mt-md"
+            maxlength="11"
+            counter
+            mask="###########"
+          />
 
-<div v-else-if="visitorFoundMessage" class="text-positive text-caption q-mt-xs">
-  {{ visitorFoundMessage }}
-</div>
+          <div v-if="visitorInsideWarning" class="text-negative text-caption q-mt-xs">
+            {{ visitorInsideWarning }}
+          </div>
 
-<q-input
-  v-model="form.phone"
-  label="Telefon"
-  outlined
-  class="q-mt-md"
-  maxlength="14"
-  placeholder="0555 123 45 67"
-  @update:model-value="formatPhoneInput"
-/>          
-<q-input
-  v-model="form.plateNumber"
-  label="Araç Plakası (Varsa)"
-  outlined
-  @blur="formatPlate"
-/>          <q-input v-model="form.visitTo" label="Kime Ziyarete Geldi" outlined class="q-mt-md" />
+          <div v-else-if="visitorFoundMessage" class="text-positive text-caption q-mt-xs">
+            {{ visitorFoundMessage }}
+          </div>
+
+          <q-input
+            v-model="form.phone"
+            label="Telefon (İsteğe Bağlı)"
+            outlined
+            class="q-mt-md"
+            maxlength="14"
+            placeholder="0555 123 45 67 (İsteğe bağlı)"
+            @update:model-value="formatPhoneInput"
+          />
+
+          <q-input
+            v-model="form.plateNumber"
+            label="Araç Plakası (Varsa)"
+            outlined
+            class="q-mt-md"
+            @blur="formatPlate"
+          />
+
+          <q-input
+            v-model="form.visitTo"
+            label="Kime Ziyarete Geldi"
+            outlined
+            class="q-mt-md"
+          />
+
+          <q-input
+            v-model="form.description"
+            label="Ziyaret Nedeni / Açıklama (İsteğe Bağlı)"
+            outlined
+            type="textarea"
+            rows="2"
+            class="q-mt-md"
+          />
+
+          <q-checkbox
+            v-model="form.cardGiven"
+            label="Ziyaretçi kartı verildi"
+            class="q-mt-md"
+          />
+
+          <q-input
+            v-if="form.cardGiven"
+            v-model="form.cardNumber"
+            label="Ziyaretçi Kart Numarası"
+            outlined
+            class="q-mt-md"
+          />
         </q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="İptal" @click="closeDialog" />
-<q-btn
-  color="primary"
-  label="Kaydet"
-  :disable="!!visitorInsideWarning"
-  @click="createVisitor"
-/>        </q-card-actions>
+          <q-btn
+            color="primary"
+            label="Kaydet"
+            :disable="!!visitorInsideWarning"
+            @click="createVisitor"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
@@ -160,6 +186,9 @@ interface Visitor {
   phone: string
   plateNumber: string
   visitTo: string
+  description: string
+  cardGiven: boolean
+  cardNumber: string
   campus: string
   entryTime: string
   exitTime: string | null
@@ -193,6 +222,9 @@ const form = ref({
   phone: '',
   plateNumber: '',
   visitTo: '',
+  description: '',
+  cardGiven: false,
+  cardNumber: '',
 })
 
 const normalizeText = (value: string) => {
@@ -233,6 +265,7 @@ const isToday = (dateValue: string | null) => {
   if (!dateValue) return false
   return new Date(dateValue).toDateString() === new Date().toDateString()
 }
+
 const formatPhoneInput = (value: string | number | null) => {
   const digits = String(value ?? '').replace(/\D/g, '').slice(0, 11)
 
@@ -246,6 +279,7 @@ const formatPhoneInput = (value: string | number | null) => {
     form.value.phone = `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9, 11)}`
   }
 }
+
 const formatPlate = () => {
   form.value.plateNumber = form.value.plateNumber.toUpperCase()
 }
@@ -275,9 +309,7 @@ const calculateDuration = (entryTime: string, exitTime: string | null) => {
 }
 
 const isValidTcNo = (tcNo: string) => {
-  if (!/^[1-9][0-9]{10}$/.test(tcNo)) {
-    return false
-  }
+  if (!/^[1-9][0-9]{10}$/.test(tcNo)) return false
 
   const digits = tcNo.split('').map(Number)
 
@@ -325,6 +357,9 @@ const filteredVisitors = computed(() => {
         visitor.phone,
         visitor.plateNumber,
         visitor.visitTo,
+        visitor.description,
+        visitor.cardGiven ? 'kart verildi' : 'kart verilmedi',
+        visitor.cardNumber,
         formatCampus(visitor.campus),
         status,
       ].join(' '),
@@ -338,9 +373,13 @@ const exportExcel = () => {
   const data = filteredVisitors.value.map((visitor) => ({
     'Ad Soyad': `${visitor.firstName} ${visitor.lastName}`,
     'TC Kimlik No': visitor.tcNo,
-    Telefon: visitor.phone,
+    Telefon: visitor.phone || '-',
     Plaka: visitor.plateNumber || '-',
     'Kime Geldi': visitor.visitTo,
+    Açıklama: visitor.description || '-',
+    'Ziyaretçi Kartı': visitor.cardGiven
+      ? `Verildi - No: ${visitor.cardNumber || '-'}`
+      : 'Verilmedi',
     Kampüs: formatCampus(visitor.campus),
     'Geliş Saati': formatDateTime(visitor.entryTime),
     'Çıkış Saati': formatDateTime(visitor.exitTime),
@@ -385,7 +424,7 @@ const columns: QTableColumn<Visitor>[] = [
   {
     name: 'phone',
     label: 'Telefon',
-    field: 'phone',
+    field: (row) => row.phone || '-',
     align: 'left',
   },
   {
@@ -398,6 +437,18 @@ const columns: QTableColumn<Visitor>[] = [
     name: 'visitTo',
     label: 'Kime Geldi',
     field: 'visitTo',
+    align: 'left',
+  },
+  {
+    name: 'description',
+    label: 'Açıklama',
+    field: (row) => row.description || '-',
+    align: 'left',
+  },
+  {
+    name: 'cardInfo',
+    label: 'Ziyaretçi Kartı',
+    field: (row) => row.cardGiven ? `Verildi - No: ${row.cardNumber || '-'}` : 'Verilmedi',
     align: 'left',
   },
   {
@@ -440,7 +491,6 @@ const columns: QTableColumn<Visitor>[] = [
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('token')
-
   return {
     Authorization: `Bearer ${token}`,
   }
@@ -454,6 +504,9 @@ const resetForm = () => {
     phone: '',
     plateNumber: '',
     visitTo: '',
+    description: '',
+    cardGiven: false,
+    cardNumber: '',
   }
 
   lastSearchedTc.value = ''
@@ -485,8 +538,9 @@ const fillVisitorByTc = async (tcNo: string) => {
 
     form.value.firstName = response.data.firstName
     form.value.lastName = response.data.lastName
-    form.value.phone = response.data.phone
+    form.value.phone = response.data.phone || ''
     form.value.plateNumber = response.data.plateNumber || ''
+    form.value.description = response.data.description || ''
 
     if (response.data.isInside) {
       visitorInsideWarning.value =
@@ -507,11 +561,12 @@ watch(
   () => form.value.tcNo,
   async (newTc) => {
     const cleanTc = newTc.trim()
-if (cleanTc.length !== 11) {
-  visitorFoundMessage.value = ''
-  visitorInsideWarning.value = ''
-  return
-}
+
+    if (cleanTc.length !== 11) {
+      visitorFoundMessage.value = ''
+      visitorInsideWarning.value = ''
+      return
+    }
 
     if (cleanTc === lastSearchedTc.value) return
 
@@ -537,12 +592,25 @@ const createVisitor = async () => {
     return
   }
 
+  if (form.value.cardGiven && !form.value.cardNumber.trim()) {
+    $q.notify({
+      type: 'negative',
+      message: 'Ziyaretçi kartı verildiyse kart numarası girilmelidir.',
+    })
+    return
+  }
+
   try {
     const response = await axiosInstance.post(
       '/visitors',
       {
         ...form.value,
         tcNo: cleanTc,
+        phone: form.value.phone || '',
+        plateNumber: form.value.plateNumber || '',
+        description: form.value.description || '',
+        cardGiven: form.value.cardGiven,
+        cardNumber: form.value.cardGiven ? form.value.cardNumber.trim() : '',
       },
       {
         headers: getAuthHeader(),
@@ -569,6 +637,7 @@ const createVisitor = async () => {
     })
   }
 }
+
 const doExitVisitor = async (id: string) => {
   await axiosInstance.put(
     `/visitors/exit/${id}`,
@@ -586,15 +655,19 @@ const doExitVisitor = async (id: string) => {
   })
 }
 
-const confirmExitVisitor = (id: string) => {
+const confirmExitVisitor = (visitor: Visitor) => {
   if (isAdmin) {
     alert('Admin kullanıcısı çıkış işlemi yapamaz.')
     return
   }
 
+  const message = visitor.cardGiven
+    ? `Bu ziyaretçiye ${visitor.cardNumber || '-'} numaralı kart verilmiş. Kart teslim alındıysa çıkış yapılsın mı?`
+    : 'Bu ziyaretçinin çıkışı yapılsın mı?'
+
   $q.dialog({
     title: 'Çıkış İşlemi',
-    message: 'Bu ziyaretçinin çıkışı yapılsın mı?',
+    message,
     cancel: {
       label: 'Hayır',
       flat: true,
@@ -605,7 +678,7 @@ const confirmExitVisitor = (id: string) => {
     },
     persistent: true,
   }).onOk(() => {
-    void doExitVisitor(id)
+    void doExitVisitor(visitor._id)
   })
 }
 

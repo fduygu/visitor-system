@@ -50,7 +50,14 @@ export const createVisitor = async (
         message: "Geçerli bir TC Kimlik No giriniz",
       });
     }
+     const cardGiven = req.body.cardGiven === true;
+     const cardNumber = String(req.body.cardNumber || "").trim();
 
+    if (cardGiven && !cardNumber) {
+      return res.status(400).json({
+        message: "Ziyaretçi kartı verildiyse kart numarası girilmelidir",
+      });
+    }
     const activeVisitor = await Visitor.findOne({
       tcNo: cleanTc,
       campus: user.role,
@@ -68,9 +75,12 @@ export const createVisitor = async (
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       tcNo: cleanTc,
-      phone: req.body.phone,
+      phone: req.body.phone || "",
       plateNumber: req.body.plateNumber || "",
       visitTo: req.body.visitTo,
+      description: req.body.description || "",
+      cardGiven,
+      cardNumber: cardGiven ? cardNumber : "",
       campus: user.role,
       status: "İÇERİDE",
       createdBy: user.id,

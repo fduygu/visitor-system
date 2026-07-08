@@ -19,7 +19,7 @@ const visitorSchema = new mongoose.Schema(
 
     phone: {
       type: String,
-      required: true,
+      default: "",
     },
 
     plateNumber: {
@@ -31,7 +31,19 @@ const visitorSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    description: {
+      type: String,
+      default: "",
+    },
+    cardGiven: {
+     type: Boolean,
+     default: false,
+    },
 
+    cardNumber: {
+    type: String,
+    default: "",
+    },
     campus: {
       type: String,
       required: true,
