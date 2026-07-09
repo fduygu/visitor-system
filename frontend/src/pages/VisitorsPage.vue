@@ -684,5 +684,54 @@ const confirmExitVisitor = (visitor: Visitor) => {
 
 onMounted(() => {
   void getVisitors()
+
+  const today = new Date().toISOString().substring(0, 10)
+  const popupKey = 'visitor_info_popup_date'
+
+  if (localStorage.getItem(popupKey) !== today) {
+    $q.dialog({
+      title: '📢 Bilgilendirme',
+      html: true,
+      message: `
+        <div style="line-height:1.7;font-size:15px">
+          <p><strong>Ziyaretçi kayıtlarının doğru tutulabilmesi için lütfen aşağıdaki kurallara dikkat ediniz.</strong></p>
+
+          <hr style="margin:12px 0">
+
+          <p>👤 <b>Kime Ziyarete Geldi</b> alanına;</p>
+          <ul style="margin-top:6px">
+            <li>Ziyaret edilen kişi</li>
+            <li>Birim</li>
+            <li>Bölüm adı yazılmalıdır.</li>
+          </ul>
+
+          <p><b>Örnek:</b> Bilgi İşlem Daire Başkanlığı, Kütüphane, Öğrenci İşleri, Personel Daire Başkanlığı</p>
+
+          <br>
+
+          <p>📝 <b>Ziyaret Nedeni / Açıklama</b> alanına;</p>
+          <ul style="margin-top:6px">
+            <li>Ders çalışma</li>
+            <li>Evrak teslimi</li>
+            <li>Toplantı</li>
+            <li>Görüşme</li>
+            <li>Teknik destek vb. geliş amacı yazılmalıdır.</li>
+          </ul>
+
+          <p style="margin-top:14px;color:#1565C0">
+            Teşekkür eder, iyi çalışmalar dileriz.
+          </p>
+        </div>
+      `,
+      ok: {
+        label: 'Anladım',
+        color: 'primary',
+        unelevated: true,
+      },
+      persistent: true,
+    })
+
+    localStorage.setItem(popupKey, today)
+  }
 })
 </script>

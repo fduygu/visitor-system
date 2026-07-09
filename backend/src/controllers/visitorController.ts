@@ -23,11 +23,15 @@ const isValidTcNo = (tcNo: string) => {
   const oddSum = d1 + d3 + d5 + d7 + d9;
   const evenSum = d2 + d4 + d6 + d8;
 
-  const check10 = ((oddSum * 7) - evenSum) % 10;
+  const check10 = (oddSum * 7 - evenSum) % 10;
   const check11 =
     (d1 + d2 + d3 + d4 + d5 + d6 + d7 + d8 + d9 + d10) % 10;
 
   return d10 === check10 && d11 === check11;
+};
+
+const toUpperTR = (value: string) => {
+  return String(value || "").trim().toLocaleUpperCase("tr-TR");
 };
 
 export const createVisitor = async (
@@ -50,14 +54,16 @@ export const createVisitor = async (
         message: "Geçerli bir TC Kimlik No giriniz",
       });
     }
-     const cardGiven = req.body.cardGiven === true;
-     const cardNumber = String(req.body.cardNumber || "").trim();
+
+    const cardGiven = req.body.cardGiven === true;
+    const cardNumber = String(req.body.cardNumber || "").trim();
 
     if (cardGiven && !cardNumber) {
       return res.status(400).json({
         message: "Ziyaretçi kartı verildiyse kart numarası girilmelidir",
       });
     }
+
     const activeVisitor = await Visitor.findOne({
       tcNo: cleanTc,
       campus: user.role,
@@ -72,12 +78,12 @@ export const createVisitor = async (
     }
 
     const visitor = await Visitor.create({
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
+      firstName: toUpperTR(req.body.firstName),
+      lastName: toUpperTR(req.body.lastName),
       tcNo: cleanTc,
       phone: req.body.phone || "",
-      plateNumber: req.body.plateNumber || "",
-      visitTo: req.body.visitTo,
+      plateNumber: toUpperTR(req.body.plateNumber || ""),
+      visitTo: toUpperTR(req.body.visitTo),
       description: req.body.description || "",
       cardGiven,
       cardNumber: cardGiven ? cardNumber : "",
@@ -87,12 +93,14 @@ export const createVisitor = async (
     });
 
     return res.status(201).json(visitor);
-  } catch (error) {
-    return res.status(500).json({
-      message: "Ziyaretçi kaydedilirken hata oluştu",
-      error,
-    });
-  }
+} catch (error) {
+  console.error("Ziyaretçi kayıt hatası:", error);
+
+  return res.status(500).json({
+    message: "Ziyaretçi kaydedilirken hata oluştu",
+    error,
+  });
+}
 };
 
 export const getVisitors = async (
@@ -126,7 +134,9 @@ export const getVisitorByTc = async (
     const cleanTc = String(tcNo || "").trim();
 
     const filter =
-      user.role === "admin" ? { tcNo: cleanTc } : { tcNo: cleanTc, campus: user.role };
+      user.role === "admin"
+        ? { tcNo: cleanTc }
+        : { tcNo: cleanTc, campus: user.role };
 
     const visitor = await Visitor.findOne(filter).sort({ createdAt: -1 });
 
