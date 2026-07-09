@@ -689,47 +689,59 @@ onMounted(() => {
   const popupKey = 'visitor_info_popup_date'
 
   if (localStorage.getItem(popupKey) !== today) {
-    $q.dialog({
-      title: '📢 Bilgilendirme',
-      html: true,
-      message: `
-        <div style="line-height:1.7;font-size:15px">
-          <p><strong>Ziyaretçi kayıtlarının doğru tutulabilmesi için lütfen aşağıdaki kurallara dikkat ediniz.</strong></p>
+$q.dialog({
+  title: '📢 Bilgilendirme',
+  html: true,
+  message: `
+    <div style="line-height:1.7;font-size:15px">
 
-          <hr style="margin:12px 0">
+      <p><strong>Ziyaretçi kayıtlarının doğru tutulabilmesi için lütfen aşağıdaki kurallara dikkat ediniz.</strong></p>
 
-          <p>👤 <b>Kime Ziyarete Geldi</b> alanına;</p>
-          <ul style="margin-top:6px">
-            <li>Ziyaret edilen kişi</li>
-            <li>Birim</li>
-            <li>Bölüm adı yazılmalıdır.</li>
-          </ul>
+      <hr style="margin:12px 0">
 
-          <p><b>Örnek:</b> Bilgi İşlem Daire Başkanlığı, Kütüphane, Öğrenci İşleri, Personel Daire Başkanlığı</p>
+      <p>👤 <b>Kime Ziyarete Geldi</b> alanına;</p>
+      <ul>
+        <li>Ziyaret edilen kişi, birim veya bölüm adı yazılmalıdır.</li>
+      </ul>
 
-          <br>
+      <p><b>Örnek:</b> Bilgi İşlem Daire Başkanlığı, Kütüphane, Öğrenci İşleri, Personel Daire Başkanlığı</p>
 
-          <p>📝 <b>Ziyaret Nedeni / Açıklama</b> alanına;</p>
-          <ul style="margin-top:6px">
-            <li>Ders çalışma</li>
-            <li>Evrak teslimi</li>
-            <li>Toplantı</li>
-            <li>Görüşme</li>
-            <li>Teknik destek vb. geliş amacı yazılmalıdır.</li>
-          </ul>
+      <br>
 
-          <p style="margin-top:14px;color:#1565C0">
-            Teşekkür eder, iyi çalışmalar dileriz.
-          </p>
-        </div>
-      `,
-      ok: {
-        label: 'Anladım',
-        color: 'primary',
-        unelevated: true,
-      },
-      persistent: true,
-    })
+      <p>📝 <b>Ziyaret Nedeni / Açıklama</b> alanına;</p>
+      <ul>
+        <li>Ders çalışma</li>
+        <li>Evrak teslimi</li>
+        <li>Toplantı</li>
+        <li>Görüşme</li>
+        <li>Teknik destek vb. geliş amacı yazılmalıdır.</li>
+      </ul>
+
+      <br>
+
+      <p>🪪 <b>Ziyaretçi Kartı</b></p>
+      <ul>
+        <li>Ziyaretçiye kart verildiyse <b>"Ziyaretçi kartı verildi"</b> seçeneğini işaretleyiniz.</li>
+        <li>Ardından verilen ziyaretçi kartının numarasını ilgili alana giriniz.</li>
+      </ul>
+
+      <p style="margin-top:15px;color:#1565C0;">
+        Sistemin doğru ve düzenli kullanılabilmesi için bilgilerin eksiksiz girilmesi önemlidir.
+      </p>
+
+  <p style="margin-top:16px;text-align:center;font-weight:600;color:#2E7D32;">
+     Teşekkür eder, iyi çalışmalar dileriz.
+  </p>
+
+    </div>
+  `,
+  ok: {
+    label: 'Anladım',
+    color: 'primary',
+    unelevated: true,
+  },
+  persistent: true,
+})
 
     localStorage.setItem(popupKey, today)
   }
