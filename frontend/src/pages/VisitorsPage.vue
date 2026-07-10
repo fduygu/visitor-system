@@ -88,8 +88,8 @@
         </q-card-section>
 
         <q-card-section>
-          <q-input v-model="form.firstName" label="Ad" outlined />
-          <q-input v-model="form.lastName" label="Soyad" outlined class="q-mt-md" />
+          <q-input v-model="form.firstName" label="Ad" outlined> <template #label>Ad <span class="text-negative">*</span></template></q-input>
+          <q-input v-model="form.lastName" label="Soyad" outlined class="q-mt-md"><template #label>Soyad <span class="text-negative">*</span></template></q-input>
 
           <q-input
             v-model="form.tcNo"
@@ -99,8 +99,11 @@
             maxlength="11"
             counter
             mask="###########"
-          />
-
+          >
+          <template #label>
+           TC Kimlik No <span class="text-negative">*</span>
+          </template>
+          </q-input>
           <div v-if="visitorInsideWarning" class="text-negative text-caption q-mt-xs">
             {{ visitorInsideWarning }}
           </div>
@@ -132,7 +135,11 @@
             label="Kime Ziyarete Geldi"
             outlined
             class="q-mt-md"
-          />
+          >
+          <template #label>
+          Kime Ziyarete Geldi <span class="text-negative">*</span>
+          </template>
+        </q-input>
 
           <q-input
             v-model="form.description"
@@ -155,7 +162,14 @@
             label="Ziyaretçi Kart Numarası"
             outlined
             class="q-mt-md"
-          />
+          >
+          <template #label>
+          Ziyaretçi Kart Numarası <span class="text-negative">*</span>
+         </template>
+         </q-input>
+         <div class="text-caption text-grey-7 q-mt-md">
+  <span class="text-negative">*</span> ile işaretli alanların doldurulması zorunludur.
+</div>
         </q-card-section>
 
         <q-card-actions align="right">

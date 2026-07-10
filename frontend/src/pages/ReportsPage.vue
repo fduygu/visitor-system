@@ -11,27 +11,36 @@
       <q-card-section>
         <div class="row q-col-gutter-md">
           <div :class="isAdmin ? 'col-12 col-md-3' : 'col-12 col-md-4'">
-            <q-input v-model="startDate" outlined dense type="date" label="Başlangıç Tarihi" />
+            <q-input
+              v-model="startDate"
+              outlined
+              dense
+              type="date"
+              label="Başlangıç Tarihi"
+            />
           </div>
 
-         <div :class="isAdmin ? 'col-12 col-md-3' : 'col-12 col-md-4'">
-            <q-input v-model="endDate" outlined dense type="date" label="Bitiş Tarihi" />
+          <div :class="isAdmin ? 'col-12 col-md-3' : 'col-12 col-md-4'">
+            <q-input
+              v-model="endDate"
+              outlined
+              dense
+              type="date"
+              label="Bitiş Tarihi"
+            />
           </div>
 
-<div
-  v-if="isAdmin"
-  class="col-12 col-md-3"
->
-  <q-select
-    v-model="selectedCampus"
-    outlined
-    dense
-    label="Kampüs"
-    :options="campusOptions"
-  />
-</div>
+          <div v-if="isAdmin" class="col-12 col-md-3">
+            <q-select
+              v-model="selectedCampus"
+              outlined
+              dense
+              label="Kampüs"
+              :options="campusOptions"
+            />
+          </div>
 
-         <div :class="isAdmin ? 'col-12 col-md-3' : 'col-12 col-md-4'">
+          <div :class="isAdmin ? 'col-12 col-md-3' : 'col-12 col-md-4'">
             <q-select
               v-model="selectedStatus"
               outlined
@@ -44,7 +53,13 @@
 
         <div class="row q-gutter-sm q-mt-md">
           <q-btn color="primary" label="Filtrele" @click="getVisitors" />
-          <q-btn flat color="primary" label="Temizle" @click="clearFilters" />
+
+          <q-btn
+            flat
+            color="primary"
+            label="Temizle"
+            @click="clearFilters"
+          />
 
           <q-btn
             color="positive"
@@ -61,7 +76,9 @@
         <q-card class="bg-blue-1">
           <q-card-section>
             <div class="text-subtitle1">{{ getCampusTitle() }}</div>
-            <div class="text-h4 text-weight-bold">{{ filteredVisitors.length }}</div>
+            <div class="text-h4 text-weight-bold">
+              {{ filteredVisitors.length }}
+            </div>
           </q-card-section>
         </q-card>
       </div>
@@ -90,11 +107,21 @@
         <div class="text-h6">Rapor Sonuçları</div>
       </q-card-section>
 
-      <q-table :rows="filteredVisitors" :columns="columns" row-key="_id" flat bordered>
+      <q-table
+        :rows="filteredVisitors"
+        :columns="columns"
+        row-key="_id"
+        flat
+        bordered
+      >
         <template #body-cell-status="props">
           <q-td :props="props">
             <q-badge
-              :color="normalizeStatus(props.row.status) === 'İÇERİDE' ? 'green' : 'grey'"
+              :color="
+                normalizeStatus(props.row.status) === 'İÇERİDE'
+                  ? 'green'
+                  : 'grey'
+              "
               :label="normalizeStatus(props.row.status)"
             />
           </q-td>
@@ -118,6 +145,9 @@ interface Visitor {
   phone: string
   plateNumber: string
   visitTo: string
+  description: string
+  cardGiven: boolean
+  cardNumber: string
   campus: string
   entryTime: string
   exitTime: string | null
@@ -136,12 +166,21 @@ const selectedStatus = ref('Tümü')
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 const isAdmin = user.role === 'admin'
 
-const campusOptions = ['Tümü', 'Kutlubey', 'Ağdacı', 'Ulus', 'Kurucaşile', 'OSB']
+const campusOptions = [
+  'Tümü',
+  'Kutlubey',
+  'Ağdacı',
+  'Ulus',
+  'Kurucaşile',
+  'OSB',
+]
+
 const statusOptions = ['Tümü', 'İÇERİDE', 'ÇIKIŞ YAPTI']
 
 const normalizeStatus = (status: string) => {
   if (status === 'ACTIVE') return 'İÇERİDE'
   if (status === 'COMPLETED') return 'ÇIKIŞ YAPTI'
+
   return status
 }
 
@@ -162,8 +201,20 @@ const formatCampus = (campus: string) => {
   }
 }
 
+const formatCardInfo = (visitor: Visitor) => {
+  if (!visitor.cardGiven) {
+    return 'Verilmedi'
+  }
+
+  return visitor.cardNumber
+    ? `Verildi - No: ${visitor.cardNumber}`
+    : 'Verildi'
+}
+
 const getCampusTitle = () => {
-  if (isAdmin) return 'Toplam Kayıt'
+  if (isAdmin) {
+    return 'Toplam Kayıt'
+  }
 
   switch (user.role) {
     case 'kutlubey':
@@ -187,13 +238,19 @@ const isDateInRange = (entryTime: string) => {
   if (startDate.value) {
     const start = new Date(startDate.value)
     start.setHours(0, 0, 0, 0)
-    if (entryDate < start) return false
+
+    if (entryDate < start) {
+      return false
+    }
   }
 
   if (endDate.value) {
     const end = new Date(endDate.value)
     end.setHours(23, 59, 59, 999)
-    if (entryDate > end) return false
+
+    if (entryDate > end) {
+      return false
+    }
   }
 
   return true
@@ -204,13 +261,21 @@ const filteredVisitors = computed(() => {
     const status = normalizeStatus(visitor.status)
     const campus = formatCampus(visitor.campus)
 
-    if (!isDateInRange(visitor.entryTime)) return false
-
-    if (selectedCampus.value !== 'Tümü' && campus !== selectedCampus.value) {
+    if (!isDateInRange(visitor.entryTime)) {
       return false
     }
 
-    if (selectedStatus.value !== 'Tümü' && status !== selectedStatus.value) {
+    if (
+      selectedCampus.value !== 'Tümü' &&
+      campus !== selectedCampus.value
+    ) {
+      return false
+    }
+
+    if (
+      selectedStatus.value !== 'Tümü' &&
+      status !== selectedStatus.value
+    ) {
       return false
     }
 
@@ -231,7 +296,9 @@ const exitedCount = computed(() => {
 })
 
 const formatDateTime = (dateValue: string | null) => {
-  if (!dateValue) return '-'
+  if (!dateValue) {
+    return '-'
+  }
 
   return new Date(dateValue).toLocaleString('tr-TR', {
     dateStyle: 'short',
@@ -239,8 +306,13 @@ const formatDateTime = (dateValue: string | null) => {
   })
 }
 
-const calculateDuration = (entryTime: string, exitTime: string | null) => {
-  if (!exitTime) return 'Devam ediyor'
+const calculateDuration = (
+  entryTime: string,
+  exitTime: string | null,
+) => {
+  if (!exitTime) {
+    return 'Devam ediyor'
+  }
 
   const entry = new Date(entryTime).getTime()
   const exit = new Date(exitTime).getTime()
@@ -249,7 +321,9 @@ const calculateDuration = (entryTime: string, exitTime: string | null) => {
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
 
-  if (hours === 0) return `${minutes} dk`
+  if (hours === 0) {
+    return `${minutes} dk`
+  }
 
   return `${hours} saat ${minutes} dk`
 }
@@ -258,13 +332,18 @@ const exportExcel = () => {
   const data = filteredVisitors.value.map((visitor) => ({
     'Ad Soyad': `${visitor.firstName} ${visitor.lastName}`,
     'TC Kimlik No': visitor.tcNo,
-    Telefon: visitor.phone,
+    Telefon: visitor.phone || '-',
     Plaka: visitor.plateNumber || '-',
-    'Kime Geldi': visitor.visitTo,
+    'Kime Geldi': visitor.visitTo || '-',
+    Açıklama: visitor.description || '-',
+    'Ziyaretçi Kartı': formatCardInfo(visitor),
     Kampüs: formatCampus(visitor.campus),
     'Geliş Saati': formatDateTime(visitor.entryTime),
     'Çıkış Saati': formatDateTime(visitor.exitTime),
-    'Kaldığı Süre': calculateDuration(visitor.entryTime, visitor.exitTime),
+    'Kaldığı Süre': calculateDuration(
+      visitor.entryTime,
+      visitor.exitTime,
+    ),
     Durum: normalizeStatus(visitor.status),
   }))
 
@@ -275,7 +354,9 @@ const exportExcel = () => {
 
   XLSX.writeFile(
     workbook,
-    `ziyaretci_raporu_${new Date().toISOString().split('T')[0]}.xlsx`,
+    `ziyaretci_raporu_${new Date()
+      .toISOString()
+      .substring(0, 10)}.xlsx`,
   )
 
   $q.notify({
@@ -300,7 +381,7 @@ const columns: QTableColumn<Visitor>[] = [
   {
     name: 'phone',
     label: 'Telefon',
-    field: 'phone',
+    field: (row) => row.phone || '-',
     align: 'left',
   },
   {
@@ -312,7 +393,19 @@ const columns: QTableColumn<Visitor>[] = [
   {
     name: 'visitTo',
     label: 'Kime Geldi',
-    field: 'visitTo',
+    field: (row) => row.visitTo || '-',
+    align: 'left',
+  },
+  {
+    name: 'description',
+    label: 'Açıklama',
+    field: (row) => row.description || '-',
+    align: 'left',
+  },
+  {
+    name: 'cardInfo',
+    label: 'Ziyaretçi Kartı',
+    field: (row) => formatCardInfo(row),
     align: 'left',
   },
   {
@@ -336,7 +429,8 @@ const columns: QTableColumn<Visitor>[] = [
   {
     name: 'duration',
     label: 'Kaldığı Süre',
-    field: (row) => calculateDuration(row.entryTime, row.exitTime),
+    field: (row) =>
+      calculateDuration(row.entryTime, row.exitTime),
     align: 'left',
   },
   {
@@ -348,15 +442,24 @@ const columns: QTableColumn<Visitor>[] = [
 ]
 
 const getVisitors = async () => {
-  const token = localStorage.getItem('token')
+  try {
+    const token = localStorage.getItem('token')
 
-  const response = await axiosInstance.get<Visitor[]>('/visitors', {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
+    const response = await axiosInstance.get<Visitor[]>('/visitors', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
 
-  visitors.value = response.data
+    visitors.value = response.data
+  } catch (error) {
+    console.error('Rapor kayıtları alınamadı:', error)
+
+    $q.notify({
+      type: 'negative',
+      message: 'Rapor kayıtları yüklenirken hata oluştu.',
+    })
+  }
 }
 
 const clearFilters = () => {
